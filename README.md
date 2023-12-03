@@ -20,4 +20,4 @@ docker run -p 3000:3000 -d task-management-app
 
 ## Deployed on:
 
-    - https://lhn-task-management-app.onrender.com/
+- https://lhn-task-management-app.onrender.com/
