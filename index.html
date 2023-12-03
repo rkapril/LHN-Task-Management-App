@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Management App</title>
+    <!-- Add Bootstrap CSS -->
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .taskItem {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .completed .taskText {
+        text-decoration: line-through;
+      }
+
+      .completeButton {
+        margin-left: auto;
+        border: none;
+        text-decoration: none !important;
+        cursor: pointer;
+        padding: 5px 10px;
+      }
+
+      .completed .completeButton {
+        background-color: red;
+        color: white;
+      }
+
+      .uncompleted .completeButton {
+        background-color: green;
+        color: white;
+      }
+
+      .hidden-button {
+        visibility: hidden !important;
+      }
+
+      ol.taskList {
+        list-style-type: decimal;
+        padding-left: 0;
+      }
+
+      ol.taskList li {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+
+  <body class="container mt-5">
+    <h1 class="mb-4">Task Management</h1>
+    <form id="addTaskForm" class="mb-4">
+      <div class="form-group">
+        <label for="taskDescription">Task Description:</label>
+        <input
+          type="text"
+          class="form-control"
+          id="taskDescription"
+          name="taskDescription"
+          required
+        />
+      </div>
+      <button type="submit" class="btn btn-primary">Add Task</button>
+    </form>
+    <ol id="taskList" class="list-group taskList"></ol>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+
+    <script>
+      const addTaskForm = document.getElementById("addTaskForm");
+      const taskList = document.getElementById("taskList");
+      const taskDescriptionInput = document.getElementById("taskDescription");
+
+      addTaskForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const taskDescription = taskDescriptionInput.value;
+
+        fetch("/tasks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `description=${encodeURIComponent(taskDescription)}`,
+        })
+          .then((response) => response.json())
+          .then((newTask) => {
+            const taskItem = document.createElement("li");
+            taskItem.classList.add("taskItem", "list-group-item");
+            const taskText = document.createElement("span");
+            taskText.classList.add("taskText");
+            taskText.textContent = newTask.description;
+
+            const completeButton = document.createElement("button");
+            completeButton.classList.add(
+              "btn",
+              "completeButton",
+              "uncompleted"
+            );
+            completeButton.textContent = "Mark as Completed";
+            completeButton.addEventListener("click", function () {
+              toggleTaskCompletion(newTask.id, taskItem);
+            });
+
+            taskItem.appendChild(taskText);
+            taskItem.appendChild(completeButton);
+            taskList.appendChild(taskItem);
+
+            taskDescriptionInput.value = "";
+          });
+      });
+
+      function toggleTaskCompletion(taskId, taskItem) {
+        fetch(`/tasks/${taskId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        })
+          .then((response) => response.json())
+          .then((updatedTask) => {
+            const taskText = taskItem.querySelector(".taskText");
+            const completeButton = taskItem.querySelector(".completeButton");
+
+            taskItem.classList.toggle("completed");
+            taskItem.classList.toggle("uncompleted");
+
+            if (taskText) {
+              taskText.style.textDecoration = taskItem.classList.contains(
+                "completed"
+              )
+                ? "line-through"
+                : "none";
+            }
+
+            if (completeButton) {
+              completeButton.textContent = updatedTask.completed
+                ? "Mark as Uncompleted"
+                : "Mark as Completed";
+              completeButton.classList.toggle("uncompleted");
+              completeButton.classList.toggle("completed");
+            }
+
+            fetchTasks();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      }
+
+      function fetchTasks() {
+        fetch("/tasks")
+          .then((response) => response.json())
+          .then((tasks) => {
+            taskList.innerHTML = "";
+            tasks.forEach((task) => {
+              const taskItem = document.createElement("li");
+              taskItem.classList.add(
+                "taskItem",
+                "list-group-item",
+                "d-flex",
+                "justify-content-between",
+                "align-items-center",
+                task.completed ? "completed" : "uncompleted"
+              );
+
+              const taskText = document.createElement("span");
+              taskText.classList.add("taskText");
+              taskText.textContent = task.description;
+
+              const completeButton = document.createElement("button");
+              completeButton.classList.add(
+                "btn",
+                "btn-success",
+                "completeButton",
+                task.completed ? "completed" : "uncompleted"
+              );
+              completeButton.textContent = task.completed
+                ? "Mark as Uncompleted"
+                : "Mark as Completed";
+              completeButton.addEventListener("click", function () {
+                toggleTaskCompletion(task.id, taskItem);
+              });
+
+              taskItem.appendChild(taskText);
+              taskItem.appendChild(completeButton);
+
+              taskList.appendChild(taskItem);
+            });
+          });
+      }
+
+      setInterval(function () {
+        fetchTasks();
+      }, 1000);
+
+      fetchTasks();
+    </script>
+  </body>
+</html>
